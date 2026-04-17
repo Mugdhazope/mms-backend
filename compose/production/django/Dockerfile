@@ -71,6 +71,8 @@ RUN chown django:django ${APP_HOME}
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
+# System user home is /nonexistent; Gunicorn's control server needs a writable HOME.
+ENV HOME=/app
 
 USER django
 

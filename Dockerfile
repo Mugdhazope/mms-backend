@@ -69,6 +69,7 @@ RUN mkdir -p ${APP_HOME}/mapmysutta/media \
   && chown django:django ${APP_HOME}
 
 ENV PATH="/app/.venv/bin:$PATH"
+ENV HOME=/app
 
 USER django
 
