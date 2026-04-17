@@ -12,6 +12,17 @@ from .base import env
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["example.com"])
+# Traefik / preview URLs like *.traefik.me (leading dot = any subdomain)
+_allow_traefik_me = env.bool("DJANGO_ALLOW_TRAEFIK_ME", default=True)
+if _allow_traefik_me and ".traefik.me" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS = [*ALLOWED_HOSTS, ".traefik.me"]
+# https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins
+_csrf_trusted = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
+if _allow_traefik_me:
+    for _origin in ("https://*.traefik.me", "http://*.traefik.me"):
+        if _origin not in _csrf_trusted:
+            _csrf_trusted.append(_origin)
+CSRF_TRUSTED_ORIGINS = _csrf_trusted
 
 # DATABASES
 # ------------------------------------------------------------------------------
