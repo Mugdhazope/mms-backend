@@ -4,6 +4,7 @@
 from pathlib import Path
 
 import environ
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 # mapmysutta/
@@ -326,6 +327,8 @@ REST_FRAMEWORK = {
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
 CORS_URLS_REGEX = r"^/api/.*$"
+# JSON API uses X-Device-Id; browsers preflight unless the header is allowed here.
+CORS_ALLOW_HEADERS = (*default_headers, "x-device-id")
 
 # By Default swagger ui is available only to admin user(s). You can change permission classes to change that
 # See more configuration options at https://drf-spectacular.readthedocs.io/en/latest/settings.html#settings

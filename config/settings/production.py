@@ -24,6 +24,13 @@ if _allow_traefik_me:
             _csrf_trusted.append(_origin)
 CSRF_TRUSTED_ORIGINS = _csrf_trusted
 
+# django-cors-headers — SPA on another host (e.g. *.traefik.me frontend → *.traefik.me API)
+CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ALLOWED_ORIGINS", default=[])
+if _allow_traefik_me:
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^https?://[\w.-]+\.traefik\.me(?::\d+)?$",
+    ]
+
 # DATABASES
 # ------------------------------------------------------------------------------
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
