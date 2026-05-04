@@ -1,6 +1,4 @@
 # ruff: noqa: E501
-from rest_framework.permissions import IsAdminUser
-
 from config.sensitive_logging import RedactSensitiveAuthFilter
 
 from .base import *  # noqa: F403
@@ -187,7 +185,8 @@ SPECTACULAR_SETTINGS["SERVERS"] = [
     {"url": "https://example.com", "description": "Production server"},
 ]
 # Restrict OpenAPI UI / schema to Django staff in production (see docs/SECURITY.md).
-SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"] = [IsAdminUser]
+# Dotted strings required — drf-spectacular passes these through DRF's import_string().
+SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"] = ["rest_framework.permissions.IsAdminUser"]
 SPECTACULAR_SETTINGS["SERVE_PUBLIC"] = False
 # Your stuff...
 # ------------------------------------------------------------------------------
