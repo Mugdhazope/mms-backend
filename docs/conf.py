@@ -29,8 +29,8 @@ django.setup()
 # -- Project information -----------------------------------------------------
 
 project = "mapmysutta"
-copyright = """2026, Mugdha"""  # noqa: A001
-author = "Mugdha"
+copyright = """2026, MapMySutta"""  # noqa: A001
+author = "MapMySutta"
 
 
 # -- General configuration ---------------------------------------------------

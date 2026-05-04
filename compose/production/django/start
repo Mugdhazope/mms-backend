@@ -4,6 +4,8 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Apply schema on deploy (fresh DBs have no tables until this runs).
+python /app/manage.py migrate --noinput
 
 python /app/manage.py collectstatic --noinput
 

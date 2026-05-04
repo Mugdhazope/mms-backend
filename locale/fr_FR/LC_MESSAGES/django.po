@@ -1,6 +1,6 @@
 # Translations for the mapmysutta project
-# Copyright (C) 2026 Mugdha
-# Mugdha <mugdha@example.com>, 2026.
+# Copyright (C) 2026 mz
+# mz <mz@example.com>, 2026.
 #
 #, fuzzy
 msgid ""

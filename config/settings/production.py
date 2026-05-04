@@ -1,4 +1,8 @@
 # ruff: noqa: E501
+from rest_framework.permissions import IsAdminUser
+
+from config.sensitive_logging import RedactSensitiveAuthFilter
+
 from .base import *  # noqa: F403
 from .base import DATABASES
 from .base import INSTALLED_APPS
@@ -25,11 +29,15 @@ if _allow_traefik_me:
 CSRF_TRUSTED_ORIGINS = _csrf_trusted
 
 # django-cors-headers — SPA on another host (e.g. *.traefik.me frontend → *.traefik.me API)
+# For real production, set DJANGO_CORS_ALLOWED_ORIGINS to explicit https:// origins and set
+# DJANGO_ALLOW_TRAEFIK_ME=false to disable the preview-tunnel regex below.
 CORS_ALLOWED_ORIGINS = env.list("DJANGO_CORS_ALLOWED_ORIGINS", default=[])
 if _allow_traefik_me:
     CORS_ALLOWED_ORIGIN_REGEXES = [
         r"^https?://[\w.-]+\.traefik\.me(?::\d+)?$",
     ]
+else:
+    CORS_ALLOWED_ORIGIN_REGEXES = []
 
 # DATABASES
 # ------------------------------------------------------------------------------
@@ -66,8 +74,8 @@ CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_NAME = "__Secure-csrftoken"
 # https://docs.djangoproject.com/en/dev/topics/security/#ssl-https
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-hsts-seconds
-# TODO: set this to 60 seconds first and then to 518400 once you prove the former works
-SECURE_HSTS_SECONDS = 60
+# Start low, then raise (e.g. 518400) after HTTPS is verified site-wide.
+SECURE_HSTS_SECONDS = env.int("DJANGO_SECURE_HSTS_SECONDS", default=60)
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-hsts-include-subdomains
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool(
     "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS",
@@ -135,7 +143,10 @@ ANYMAIL = {}
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "filters": {"require_debug_false": {"()": "django.utils.log.RequireDebugFalse"}},
+    "filters": {
+        "require_debug_false": {"()": "django.utils.log.RequireDebugFalse"},
+        "redact_sensitive_auth": {"()": RedactSensitiveAuthFilter},
+    },
     "formatters": {
         "verbose": {
             "format": "%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s",
@@ -151,6 +162,7 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
+            "filters": ["redact_sensitive_auth"],
         },
     },
     "root": {"level": "INFO", "handlers": ["console"]},
@@ -174,5 +186,8 @@ LOGGING = {
 SPECTACULAR_SETTINGS["SERVERS"] = [
     {"url": "https://example.com", "description": "Production server"},
 ]
+# Restrict OpenAPI UI / schema to Django staff in production (see docs/SECURITY.md).
+SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"] = [IsAdminUser]
+SPECTACULAR_SETTINGS["SERVE_PUBLIC"] = False
 # Your stuff...
 # ------------------------------------------------------------------------------

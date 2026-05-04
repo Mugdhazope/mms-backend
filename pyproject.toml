@@ -5,7 +5,7 @@ description = "lets find sutta"
 readme = "README.md"
 license = { text = "Not open source" }
 authors = [
-  { name = "Mugdha", email = "mugdha@example.com" },
+  { name = "mz", email = "mz@example.com" },
 ]
 requires-python = "==3.14.*"
 classifiers = [

@@ -3,6 +3,9 @@ from __future__ import annotations
 import pytest
 from rest_framework.test import APIClient
 
+from mapmysutta.core.device_token import mint_device_access_token
+from mapmysutta.core.limits import NOTE_TEXT_MAX_LENGTH
+from mapmysutta.core.limits import SPOT_LIST_MAX_RADIUS_M
 from mapmysutta.core.models import Device
 from mapmysutta.core.models import Spot
 from mapmysutta.core.models import SpotNote
@@ -43,21 +46,23 @@ def captcha_enforced(settings, monkeypatch):
 @pytest.mark.django_db
 def test_device_identify_is_idempotent_and_username_immutable(api_client: APIClient):
     url = "/api/v1/device/identify"
-    first = api_client.post(url, {"device_id": "device-123", "username": "mugdha"}, format="json")
+    first = api_client.post(url, {"device_id": "device-123", "username": "mz"}, format="json")
     second = api_client.post(url, {"device_id": "device-123", "username": "othername"}, format="json")
 
     assert first.status_code == 200
     assert second.status_code == 200
     assert Device.objects.filter(device_id="device-123").count() == 1
-    assert second.data["username"] == "mugdha"
+    assert second.data["username"] == "mz"
+    assert isinstance(first.data.get("access_token"), str)
+    assert first.data["access_token"]
 
 
 @pytest.mark.django_db
 def test_device_identify_rejects_taken_username(api_client: APIClient):
-    Device.objects.create(device_id="seed-device-01", username="mugdha")
+    Device.objects.create(device_id="seed-device-01", username="mz")
     response = api_client.post(
         "/api/v1/device/identify",
-        {"device_id": "seed-device-02", "username": "MUGDHA"},
+        {"device_id": "seed-device-02", "username": "MZ"},
         format="json",
     )
     assert response.status_code == 400
@@ -74,6 +79,8 @@ def test_device_detail_returns_karma(api_client: APIClient):
     assert response.data["device_id"] == "detail-me"
     assert response.data["karma"] == 7
     assert response.data["trust_score"] == 3.5
+    assert isinstance(response.data.get("access_token"), str)
+    assert response.data["access_token"]
 
 
 @pytest.mark.django_db
@@ -342,3 +349,68 @@ def test_identify_throttle_scope_limits_requests(api_client: APIClient, settings
     )
     assert first.status_code == 200
     assert second.status_code == 429
+
+
+@pytest.mark.django_db
+def test_spot_list_accepts_bearer_token_without_x_device_header(api_client: APIClient):
+    spot = SpotFactory()
+    token = mint_device_access_token(spot.created_by.device_id)
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+    response = api_client.get("/api/v1/spots")
+    assert response.status_code == 200
+    assert any(r["id"] == str(spot.id) for r in response.data["results"])
+
+
+@pytest.mark.django_db
+def test_spot_list_rejects_invalid_lat_lng_query(api_client: APIClient):
+    spot = SpotFactory()
+    api_client.credentials(HTTP_X_DEVICE_ID=spot.created_by.device_id)
+    response = api_client.get("/api/v1/spots?lat=not-a-float&lng=1&radiusM=1000")
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_spot_list_rejects_radius_above_cap(api_client: APIClient):
+    spot = SpotFactory()
+    api_client.credentials(HTTP_X_DEVICE_ID=spot.created_by.device_id)
+    response = api_client.get(
+        f"/api/v1/spots?lat=19&lng=73&radiusM={SPOT_LIST_MAX_RADIUS_M + 1}",
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_spot_create_rejects_latitude_out_of_range(api_client: APIClient):
+    spot = SpotFactory()
+    api_client.credentials(HTTP_X_DEVICE_ID=spot.created_by.device_id)
+    response = api_client.post(
+        "/api/v1/spots",
+        {"latitude": 99.0, "longitude": 73.0, "tags": []},
+        format="json",
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_spot_note_rejects_text_over_limit(api_client: APIClient):
+    spot = SpotFactory()
+    api_client.credentials(HTTP_X_DEVICE_ID=spot.created_by.device_id)
+    url = f"/api/v1/spots/{spot.id}/notes"
+    response = api_client.post(
+        url,
+        {"text": "x" * (NOTE_TEXT_MAX_LENGTH + 1)},
+        format="json",
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_engagement_rejects_unknown_type(api_client: APIClient):
+    device = Device.objects.create(device_id="engage-device", username="engage_user")
+    api_client.credentials(HTTP_X_DEVICE_ID=device.device_id)
+    response = api_client.post(
+        "/api/v1/events/engagement",
+        {"type": "haxxor", "metadata": {}},
+        format="json",
+    )
+    assert response.status_code == 400

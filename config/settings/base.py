@@ -232,6 +232,11 @@ RECAPTCHA_VERIFY_URL = env(
     "RECAPTCHA_VERIFY_URL",
     default="https://www.google.com/recaptcha/api/siteverify",
 )
+# https://docs.djangoproject.com/en/stable/ref/settings/#data-upload-max-memory-size
+DATA_UPLOAD_MAX_MEMORY_SIZE = env.int("DJANGO_DATA_UPLOAD_MAX_MEMORY_SIZE", default=2_621_440)
+DATA_UPLOAD_MAX_NUMBER_FIELDS = env.int("DJANGO_DATA_UPLOAD_MAX_NUMBER_FIELDS", default=128)
+# Signed Bearer token for /api/v1 (see mapmysutta.core.device_token)
+DEVICE_ACCESS_TOKEN_MAX_AGE = env.int("DEVICE_ACCESS_TOKEN_MAX_AGE", default=30 * 24 * 3600)
 
 # EMAIL
 # ------------------------------------------------------------------------------
@@ -248,7 +253,7 @@ EMAIL_TIMEOUT = 5
 # Django Admin URL.
 ADMIN_URL = "admin/"
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = ['"Mugdha" <mugdha@example.com>']
+ADMINS = ['"mz" <mz@example.com>']
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 # https://cookiecutter-django.readthedocs.io/en/latest/settings.html#other-environment-settings
@@ -328,7 +333,7 @@ REST_FRAMEWORK = {
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
 CORS_URLS_REGEX = r"^/api/.*$"
 # JSON API uses X-Device-Id; browsers preflight unless the header is allowed here.
-CORS_ALLOW_HEADERS = (*default_headers, "x-device-id")
+CORS_ALLOW_HEADERS = (*default_headers, "x-device-id", "authorization")
 
 # By Default swagger ui is available only to admin user(s). You can change permission classes to change that
 # See more configuration options at https://drf-spectacular.readthedocs.io/en/latest/settings.html#settings

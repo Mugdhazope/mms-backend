@@ -19,6 +19,7 @@ from drf_spectacular.utils import extend_schema
 from drf_spectacular.utils import extend_schema_view
 from rest_framework import permissions
 from rest_framework import status
+from rest_framework.exceptions import ParseError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -44,6 +45,7 @@ from mapmysutta.core.models import Spot
 from mapmysutta.core.models import SpotNote
 from mapmysutta.core.models import SpotTag
 from mapmysutta.core.models import SpotUsualTiming
+from mapmysutta.core.limits import SPOT_LIST_MAX_RADIUS_M
 from mapmysutta.core.models import SpotVote
 from mapmysutta.core.services.area import compute_area_signal
 from mapmysutta.core.services.karma import apply_karma
@@ -361,9 +363,20 @@ class SpotListCreateView(CaptchaEnforcedAPIView):
         radius_m = request.query_params.get("radiusM")
 
         if lat is not None and lng is not None and radius_m is not None:
-            lat_value = float(lat)
-            lng_value = float(lng)
-            radius_value = float(radius_m)
+            try:
+                lat_value = float(lat)
+                lng_value = float(lng)
+                radius_value = float(radius_m)
+            except (TypeError, ValueError) as exc:
+                raise ParseError(
+                    detail="Query parameters lat, lng, and radiusM must be valid numbers.",
+                ) from exc
+            if lat_value < -90.0 or lat_value > 90.0 or lng_value < -180.0 or lng_value > 180.0:
+                raise ParseError(detail="lat and lng are out of allowed range.")
+            if radius_value <= 0.0 or radius_value > SPOT_LIST_MAX_RADIUS_M:
+                raise ParseError(
+                    detail=f"radiusM must be between 0 and {SPOT_LIST_MAX_RADIUS_M} meters.",
+                )
             lat_delta = radius_value / 111_320.0
             lng_denominator = max(cos(radians(lat_value)) * 111_320.0, 1e-6)
             lng_delta = radius_value / lng_denominator
